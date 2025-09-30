@@ -1,0 +1,9 @@
+health_check_port: ${PORT}
+server_config:
+  processor_config:
+    ${PROCESSOR}:
+  transaction_stream_config:
+    indexer_grpc_data_service_address: ${INDEXER_API_URL}
+    auth_token: ${AUTH_TOKEN}
+    request_name_header: "tuma_processor"
+    starting_version: ${STARTING_VERSION}
