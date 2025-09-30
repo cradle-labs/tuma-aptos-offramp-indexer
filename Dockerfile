@@ -46,8 +46,8 @@ COPY --from=builder /app/target/release/tuma-indexer /app/tuma-indexer
 # Copy configuration template
 COPY processor.yaml.tmpl /app/
 
-# Change ownership to app user
-RUN chown appuser:appuser /app/tuma-indexer /app/processor.yaml.tmpl
+# Change ownership to app user and ensure write permissions for config creation
+RUN chown -R appuser:appuser /app && chmod 755 /app
 
 # Switch to non-root user
 USER appuser
