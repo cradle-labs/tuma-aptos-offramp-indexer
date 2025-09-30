@@ -43,8 +43,11 @@ WORKDIR /app
 # Copy the binary from builder stage
 COPY --from=builder /app/target/release/tuma-indexer /app/tuma-indexer
 
+# Copy configuration template
+COPY processor.yaml.tmpl /app/
+
 # Change ownership to app user
-RUN chown appuser:appuser /app/tuma-indexer
+RUN chown appuser:appuser /app/tuma-indexer /app/processor.yaml.tmpl
 
 # Switch to non-root user
 USER appuser
