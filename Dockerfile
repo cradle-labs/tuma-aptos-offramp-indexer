@@ -56,4 +56,4 @@ USER appuser
 EXPOSE 7979
 
 # Run the binary
-CMD ["./tuma-indexer"]
+CMD ["./tuma-indexer", "--config-path", "config.yaml"]
