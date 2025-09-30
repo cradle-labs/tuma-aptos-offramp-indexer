@@ -25,5 +25,5 @@ shellexpand = "3.1.1"
 bigdecimal = {version =  "0.4.8", features = ["serde"] }
 redis = {version = "0.32.0", features = ["aio", "connection-manager", "tokio-comp"]}
 deadpool-redis = "0.21.1"
-tuma = { package = "tuma", path ="../tuma"}
+tuma = { package = "tuma", git = "https://github.com/cradle-labs/tuma_rust_integrator.git"}
 uuid = { version = "1.18.1", features = ["v4", "serde"] }
