@@ -15,6 +15,7 @@ RUN apt-get update && apt-get install -y \
     pkg-config \
     libssl-dev \
     libpq-dev \
+    libdw-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Build dependencies - this layer will be cached unless dependencies change
