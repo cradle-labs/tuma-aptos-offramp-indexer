@@ -53,7 +53,7 @@ impl Processable for TumaTransactionStreamProcessor {
 
                                     let args = data.arguments.clone();
                                     match data.entry_function_id_str.as_str() {
-                                        "0xce349ffbde2e28c21a4a7de7c4e1b3d72f1fe079494c7f8f8832bd6c8502e559::tuma::deposit_fungible"=>{
+                                        "0xce349ffbde2e28c21a4a7de7c4e1b3d72f1fe079494c7f8f8832bd6c8502e559::tuma::deposit_fungible_with_observer"=>{
                                             println!("ALl Args :: {:?}", args);
 
                                             let token_metadata = args[0].clone();
