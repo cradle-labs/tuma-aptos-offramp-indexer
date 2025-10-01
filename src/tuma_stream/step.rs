@@ -1,9 +1,13 @@
+use std::str::FromStr;
 use anyhow::anyhow;
 use aptos_indexer_processor_sdk::{aptos_protos::transaction::v1::{transaction::TxnData, transaction_payload::Payload, Transaction}, traits::{AsyncRunType, AsyncStep, NamedStep, Processable}, types::transaction_context::TransactionContext, utils::errors::ProcessorError};
 use aptos_indexer_processor_sdk::utils::errors::ProcessorError::ProcessError;
-use bigdecimal::BigDecimal;
+use bigdecimal::{BigDecimal, Pow};
 use diesel::{r2d2::{self, ConnectionManager}, PgConnection};
 use serde::{Deserialize, Serialize};
+use tuma::payments::PaymentSessions;
+use tuma::r#static::currency::CurrencyStaticData;
+use uuid::Uuid;
 use crate::config::deps::Config;
 use crate::tuma_stream::offramp::{CreateOffRampRequest, OffRamp};
 
@@ -28,6 +32,8 @@ impl Processable for TumaTransactionStreamProcessor {
 
         let  mut off_ramp_registration = OffRamp::new(self.pool.clone());
 
+        let mut payment_session_handler = PaymentSessions::new(self.pool.clone()).unwrap();
+
         let transactions = input.data;
         for transaction in transactions {
             // println!("New transaction :: {:?}", transaction.version);
@@ -38,7 +44,7 @@ impl Processable for TumaTransactionStreamProcessor {
                             if let Some(payload) = &request_payload.payload {
                                 let tx = transaction.clone();
                                 if let Payload::EntryFunctionPayload(data) = payload {
-
+                                    let currency_data = CurrencyStaticData::new();
 
                                     #[derive(Deserialize,Serialize)]
                                     struct Inner {
@@ -96,6 +102,64 @@ impl Processable for TumaTransactionStreamProcessor {
                                                 }
                                             }
 
+                                        }
+                                        "0xce349ffbde2e28c21a4a7de7c4e1b3d72f1fe079494c7f8f8832bd6c8502e559::tuma::make_payment_fungible"=>{
+                                            println!("ALl Args :: {:?}", args);
+
+                                            let token_metadata = args[0].clone();
+                                            let token = match serde_json::from_str::<Inner>(token_metadata.as_str()) {
+                                                Ok(t) => t.inner,
+                                                Err(e)=>{
+                                                    println!("Unable to deserialize token {} metadata {}", e, token_metadata);
+                                                    return continue;
+                                                }
+                                            };
+                                            let token_amount_str = match serde_json::from_str::<String>(args[1].as_str()) {
+                                                Ok(s) => s,
+                                                Err(e) => {
+                                                    println!("Unable to deserialize token amount string: {}", e);
+                                                    continue;
+                                                }
+                                            };
+
+                                            let session_id = match serde_json::from_str::<String>(args[2].as_str()) {
+                                                Ok(s)=>match Uuid::from_str(s.as_str()) {Ok(v)=>v, Err(e)=>{
+                                                    println!("Unable to parse session id");
+                                                    continue
+                                                }},
+                                                Err(e)=> {
+                                                    println!("Unable to deserialize session as string: {}", e);
+                                                    continue;
+                                                }
+                                            };
+
+                                            let token_amount = match token_amount_str.parse::<u64>() {
+                                                Ok(v) => v,
+                                                Err(e) => {
+                                                    println!("Unable to parse token amount successfully: {}", e);
+                                                    continue;
+                                                }
+                                            };
+
+                                            let token_currency_decimals = match currency_data.get_currency_by_token(token.clone()) {
+                                                Some(c)=> match c.decimals { Some(v)=>v, None=>continue},
+                                                None=>continue
+                                            };
+
+                                            let normalized_token_a = (token_amount as f64) / (10_u64.pow(token_currency_decimals as u32) as f64);
+
+                                            let requester = request.sender.clone();
+                                            let version = transaction.version.clone().to_string();
+
+                                            match payment_session_handler.off_ramp_payment_session(session_id.to_string(), normalized_token_a, token, version.clone()).await {
+                                                Ok(v)=>{
+                                                    println!("Successfully recorded payment {}",v)
+                                                },
+                                                Err(e)=>{
+                                                    println!("Something went wrong :: {e}");
+                                                    continue;
+                                                }
+                                            }
                                         }
                                         _=>{
 

@@ -9,6 +9,7 @@ use tuma::controller::aptos_panora_provider::AptosPanoraProvider;
 use tuma::kvstore::KVStoreManager;
 use tuma::payment_provider::sender::FiatSender;
 use tuma::payment_provider::tuma_request_handler::TumaRequestHandler;
+use tuma::payments::PaymentSessions;
 use tuma::pretium::PretiumService;
 
 #[derive(Debug, Clone)]
