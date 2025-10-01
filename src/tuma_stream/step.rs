@@ -72,6 +72,14 @@ impl Processable for TumaTransactionStreamProcessor {
                                                 }
                                             };
 
+                                            let observer_key = match serde_json::from_str::<String>(args[2].as_str()) {
+                                                Ok(s)=>s,
+                                                Err(e)=>{
+                                                    println!("Unablt to deserialize value: {}",e);
+                                                    continue;
+                                                }
+                                            };
+
                                             let token_amount = match token_amount_str.parse::<u64>() {
                                                 Ok(v) => v,
                                                 Err(e) => {
@@ -90,7 +98,8 @@ impl Processable for TumaTransactionStreamProcessor {
                                                 transaction_version: version.clone(),
                                                 from_token: token,
                                                 from_token_amount: BigDecimal::from(token_amount),
-                                                transaction_hash: version.clone()
+                                                transaction_hash: version.clone(),
+                                                observer_key: Some(observer_key)
                                             }).await {
                                                 Ok(_)=>{
                                                     println!("Successfully recorded on-ramp {}", version.clone())

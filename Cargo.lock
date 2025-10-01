@@ -5129,7 +5129,7 @@ checksum = "e421abadd41a4225275504ea4d6566923418b7f05506fbc9c0fe86ba7396114b"
 [[package]]
 name = "tuma"
 version = "0.1.0"
-source = "git+https://github.com/cradle-labs/tuma_rust_integrator.git#bc39fd5346800f2e640aef86e491666bf3c71b3e"
+source = "git+https://github.com/cradle-labs/tuma_rust_integrator.git#4645c01970696ae7b96999cfa6caf61509991754"
 dependencies = [
  "anyhow",
  "aptos-bcs",

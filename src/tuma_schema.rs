@@ -69,6 +69,8 @@ diesel::table! {
         requested_at -> Timestamp,
         finalized_at -> Nullable<Timestamp>,
         status -> OfframpRequestStatus,
+        to_amount -> Nullable<Numeric>,
+        observer_key -> Nullable<Text>,
     }
 }
 
@@ -106,6 +108,28 @@ diesel::table! {
     }
 }
 
+diesel::table! {
+    use diesel::sql_types::*;
+    use super::sql_types::OfframpRequestStatus;
+
+    payment_sessions (id) {
+        id -> Uuid,
+        payment_provider_id -> Text,
+        payment_identity -> Text,
+        account_identity -> Nullable<Text>,
+        payer -> Text,
+        requested_at -> Nullable<Timestamp>,
+        finalized_at -> Nullable<Timestamp>,
+        data -> Nullable<Jsonb>,
+        transaction_hash -> Nullable<Text>,
+        transferred_amount -> Numeric,
+        transferred_token -> Nullable<Text>,
+        final_fiat_value -> Numeric,
+        status -> Nullable<OfframpRequestStatus>,
+        transaction_code -> Nullable<Text>,
+    }
+}
+
 diesel::joinable!(ledger -> account (address));
 diesel::joinable!(ledger -> payment_method (payment_method_id));
 diesel::joinable!(off_ramp_requests -> account (requester));
@@ -120,4 +144,5 @@ diesel::allow_tables_to_appear_in_same_query!(
     off_ramp_requests,
     on_ramp_requests,
     payment_method,
+    payment_sessions,
 );

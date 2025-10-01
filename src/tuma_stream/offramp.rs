@@ -17,7 +17,8 @@ pub struct CreateOffRampRequest {
     pub transaction_version: String,
     pub transaction_hash: String,
     pub transaction_code: Option<String>,
-    pub data: Option<Value>
+    pub data: Option<Value>,
+    pub observer_key: Option<String>
 }
 
 pub struct OffRamp {
