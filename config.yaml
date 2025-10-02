@@ -3,7 +3,7 @@ server_config:
   processor_config:
     tuma_processor:
   transaction_stream_config:
-    indexer_grpc_data_service_address: https://grpc.testnet.aptoslabs.com:443
-    auth_token: aptoslabs_TCMUz7pF9wR_Pasn4dvERCtjy9LQNTJrPbXejmsz7spS7
+    indexer_grpc_data_service_address: https://grpc.mainnet.aptoslabs.com:443
+    auth_token: aptoslabs_h56FU3aqMbD_M4nJ5PiQHgVyRg3oQYHzFECqVoE9hFov4
     request_name_header: "tuma_processor"
-    starting_version: 6888382460
+    starting_version: 3494162540

@@ -1,6 +1,7 @@
 use std::str::FromStr;
 use anyhow::anyhow;
 use aptos_indexer_processor_sdk::{aptos_protos::transaction::v1::{transaction::TxnData, transaction_payload::Payload, Transaction}, traits::{AsyncRunType, AsyncStep, NamedStep, Processable}, types::transaction_context::TransactionContext, utils::errors::ProcessorError};
+use aptos_indexer_processor_sdk::aptos_protos::transaction::v1::move_type::Content;
 use aptos_indexer_processor_sdk::utils::errors::ProcessorError::ProcessError;
 use bigdecimal::{BigDecimal, Pow};
 use diesel::{r2d2::{self, ConnectionManager}, PgConnection};
@@ -52,6 +53,7 @@ impl Processable for TumaTransactionStreamProcessor {
                                     }
 
                                     let args = data.arguments.clone();
+                                    let type_args = data.type_arguments.clone();
                                     match data.entry_function_id_str.as_str() {
                                         "0xce349ffbde2e28c21a4a7de7c4e1b3d72f1fe079494c7f8f8832bd6c8502e559::tuma::deposit_fungible_with_observer"=>{
                                             println!("ALl Args :: {:?}", args);
@@ -73,6 +75,67 @@ impl Processable for TumaTransactionStreamProcessor {
                                             };
 
                                             let observer_key = match serde_json::from_str::<String>(args[2].as_str()) {
+                                                Ok(s)=>s,
+                                                Err(e)=>{
+                                                    println!("Unablt to deserialize value: {}",e);
+                                                    continue;
+                                                }
+                                            };
+
+                                            let token_amount = match token_amount_str.parse::<u64>() {
+                                                Ok(v) => v,
+                                                Err(e) => {
+                                                    println!("Unable to parse token amount successfully: {}", e);
+                                                    continue;
+                                                }
+                                            };
+
+                                            let requester = request.sender.clone();
+                                            let version = transaction.version.clone().to_string();
+
+                                            match off_ramp_registration.create_off_ramp_request(CreateOffRampRequest {
+                                                data: None,
+                                                requester,
+                                                transaction_code: None,
+                                                transaction_version: version.clone(),
+                                                from_token: token,
+                                                from_token_amount: BigDecimal::from(token_amount),
+                                                transaction_hash: version.clone(),
+                                                observer_key: Some(observer_key)
+                                            }).await {
+                                                Ok(_)=>{
+                                                    println!("Successfully recorded on-ramp {}", version.clone())
+                                                },
+                                                Err(e)=>{
+                                                    println!("Error:: {}",e);
+                                                    println!("Failed to off ramp successfully for transaction {}", version.clone());
+                                                    continue;
+                                                }
+                                            }
+
+                                        }
+                                        "0xce349ffbde2e28c21a4a7de7c4e1b3d72f1fe079494c7f8f8832bd6c8502e559::tuma::deposit_coin_with_observer"=>{
+
+                                            let main_coin = type_args[0].clone();
+                                            let token = match main_coin.content {
+                                                Some(c)=>match c {
+                                                    Content::Struct(v)=>{
+                                                        format!("{}:{}:{}", v.address, v.module, v.name)
+                                                    },
+                                                    _=>return continue
+                                                },
+                                                None=>return continue
+                                            };
+
+                                            let token_amount_str = match serde_json::from_str::<String>(args[0].as_str()) {
+                                                Ok(s) => s,
+                                                Err(e) => {
+                                                    println!("Unable to deserialize token amount string: {}", e);
+                                                    continue;
+                                                }
+                                            };
+
+                                            let observer_key = match serde_json::from_str::<String>(args[1].as_str()) {
                                                 Ok(s)=>s,
                                                 Err(e)=>{
                                                     println!("Unablt to deserialize value: {}",e);
@@ -156,6 +219,65 @@ impl Processable for TumaTransactionStreamProcessor {
                                             };
 
                                             let normalized_token_a = (token_amount as f64) / (10_u64.pow(token_currency_decimals as u32) as f64);
+
+                                            let requester = request.sender.clone();
+                                            let version = transaction.version.clone().to_string();
+
+                                            match payment_session_handler.off_ramp_payment_session(session_id.to_string(), normalized_token_a, token, version.clone()).await {
+                                                Ok(v)=>{
+                                                    println!("Successfully recorded payment {}",v)
+                                                },
+                                                Err(e)=>{
+                                                    println!("Something went wrong :: {e}");
+                                                    continue;
+                                                }
+                                            }
+                                        }
+                                        "0xce349ffbde2e28c21a4a7de7c4e1b3d72f1fe079494c7f8f8832bd6c8502e559::tuma::make_payment_coins"=>{
+                                            let main_coin = type_args[0].clone();
+                                            let token = match main_coin.content {
+                                                Some(c)=>match c {
+                                                    Content::Struct(v)=>{
+                                                        format!("{}:{}:{}", v.address, v.module, v.name)
+                                                    },
+                                                    _=>return continue
+                                                },
+                                                None=>return continue
+                                            };
+
+                                            let token_amount_str = match serde_json::from_str::<String>(args[0].as_str()) {
+                                                Ok(s) => s,
+                                                Err(e) => {
+                                                    println!("Unable to deserialize token amount string: {}", e);
+                                                    continue;
+                                                }
+                                            };
+
+                                            let token_amount = match token_amount_str.parse::<u64>() {
+                                                Ok(v) => v,
+                                                Err(e) => {
+                                                    println!("Unable to parse token amount successfully: {}", e);
+                                                    continue;
+                                                }
+                                            };
+
+                                            let token_currency_decimals = match currency_data.get_currency_by_token(token.clone()) {
+                                                Some(c)=> match c.decimals { Some(v)=>v, None=>continue},
+                                                None=>continue
+                                            };
+
+                                            let normalized_token_a = (token_amount as f64) / (10_u64.pow(token_currency_decimals as u32) as f64);
+
+                                            let session_id = match serde_json::from_str::<String>(args[2].as_str()) {
+                                                Ok(s)=>match Uuid::from_str(s.as_str()) {Ok(v)=>v, Err(e)=>{
+                                                    println!("Unable to parse session id");
+                                                    continue
+                                                }},
+                                                Err(e)=> {
+                                                    println!("Unable to deserialize session as string: {}", e);
+                                                    continue;
+                                                }
+                                            };
 
                                             let requester = request.sender.clone();
                                             let version = transaction.version.clone().to_string();

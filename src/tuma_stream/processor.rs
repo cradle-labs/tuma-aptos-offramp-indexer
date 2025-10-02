@@ -26,20 +26,21 @@ impl TumaStreamProcessor {
         let stream_config = self.config.transaction_stream_config.clone();
         let env_transaction_value = env::var("STARTING_VERSION")?;
         let latest_transaction_version_string = {
-          match self.app_config.kvStore.get("latest_transaction_version".to_string()).await {
-              Ok(res)=>{
-                  match res {
-                      Some(v)=>{
-                          v
-                      },
-                      None=> env_transaction_value
-                  }
-              },
-              Err(e)=>{
-                  println!("Unable to check db {e}");
-                  env_transaction_value
-              }
-          }
+            env_transaction_value
+          // match self.app_config.kvStore.get("latest_transaction_version".to_string()).await {
+          //     Ok(res)=>{
+          //         match res {
+          //             Some(v)=>{
+          //                 v
+          //             },
+          //             None=> env_transaction_value
+          //         }
+          //     },
+          //     Err(e)=>{
+          //         println!("Unable to check db {e}");
+          //         env_transaction_value
+          //     }
+          // }
         };
 
         let latest_transaction_version = latest_transaction_version_string.parse::<u64>()?;
